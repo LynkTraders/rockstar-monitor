@@ -250,7 +250,12 @@ def collect(state):
     seen = set(state.get("seen_ids", []))
     alerted_titles = list(state.get("alerted_titles", []))
     alerted_set = set(alerted_titles)
-    first_run = not seen
+    # Pas "ingericht" als elke bron minstens een keer goed is opgehaald.
+    # Faalt er een bron tijdens de eerste run, dan blijft die vlag uit en
+    # wordt er de volgende run opnieuw stil ingelezen in plaats van dat
+    # de hele achterstand alsnog als nieuws binnenkomt.
+    first_run = not state.get("bootstrapped")
+    failed = []
     alerts = []
 
     sources = [
@@ -264,6 +269,7 @@ def collect(state):
             items = fetcher()
         except Exception as e:
             log(f"Bron '{name}' mislukt: {e}")
+            failed.append(name)
             continue
 
         log(f"Bron '{name}': {len(items)} items opgehaald")
@@ -310,7 +316,12 @@ def collect(state):
         check_x(state, alerts)
 
     if first_run:
-        log(f"Eerste run: {len(alerts)} bestaande items als 'gezien' gemarkeerd, niets verstuurd")
+        if failed:
+            log(f"Eerste run: bron(nen) {', '.join(failed)} mislukt — "
+                f"volgende run leest opnieuw stil in")
+        else:
+            state["bootstrapped"] = True
+        log(f"Eerste run: {len(alerts)} item(s) als 'gezien' gemarkeerd, niets verstuurd")
         return []
 
     # Nieuwste bovenaan, GTA VI eerst.
