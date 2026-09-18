@@ -1,0 +1,60 @@
+name: Rockstar Monitor
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Droogloop — wel detecteren, geen WhatsApp versturen'
+        type: boolean
+        default: false
+
+# Nooit twee runs tegelijk: die vechten om de state-commit.
+concurrency:
+  group: rockstar-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Monitor draaien
+        env:
+          WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
+          WHATSAPP_APIKEY: ${{ secrets.WHATSAPP_APIKEY }}
+          # Zet op 'true' voor uitsluitend GTA VI-berichten.
+          ONLY_GTA6: ${{ vars.ONLY_GTA6 || 'false' }}
+          WATCH_X: ${{ vars.WATCH_X || 'true' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: python rockstar_monitor.py
+
+      - name: State bewaren
+        if: ${{ !inputs.dry_run }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add monitor_state.json
+          if git diff --staged --quiet; then
+            echo "Niets veranderd."
+            exit 0
+          fi
+          git commit -m "chore: state bijgewerkt [skip ci]"
+          for i in 1 2 3; do
+            git pull --rebase --autostash && git push && exit 0
+            echo "Push $i mislukt, opnieuw..."
+            sleep 5
+          done
+          echo "::warning::State kon niet worden gepusht"
