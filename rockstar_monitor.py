@@ -114,7 +114,9 @@ def send_whatsapp(message):
         log(f"WhatsApp {'verstuurd' if ok else 'MISLUKT'} (HTTP {r.status_code})")
         return ok
     except requests.RequestException as e:
-        log(f"WhatsApp fout: {e}")
+        # Niet de exceptie zelf loggen: requests zet de volledige URL in de
+        # tekst, inclusief de apikey-parameter. Actions-logs zijn openbaar.
+        log(f"WhatsApp fout: {type(e).__name__}")
         return False
 
 
