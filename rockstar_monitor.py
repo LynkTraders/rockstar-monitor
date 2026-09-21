@@ -175,8 +175,17 @@ def fetch_newswire(limit=20):
 
 
 # ── Bronnen 2 & 3: RSS ────────────────────────────────────────────────
-def fetch_rss(source, url, prefix):
-    feed = feedparser.parse(url, agent=UA)
+def fetch_rss(source, url, prefix, attempts=2):
+    # YouTube levert af en toe afgekapte XML ("not well-formed"). Een
+    # tweede poging een paar seconden later is bijna altijd genoeg.
+    feed = None
+    for attempt in range(1, attempts + 1):
+        feed = feedparser.parse(url, agent=UA)
+        if feed.entries:
+            break
+        if attempt < attempts:
+            log(f"  {source}: lege/kapotte feed, nieuwe poging")
+            time.sleep(3)
     if getattr(feed, "bozo", 0) and not feed.entries:
         raise RuntimeError(getattr(feed, "bozo_exception", "feed onleesbaar"))
 
@@ -227,6 +236,7 @@ def check_x(state, alerts):
     log(f"X: {new} nieuwe post(s) — teller {previous} -> {count}")
     alerts.append(
         {
+            "prev_count": previous,
             "priority": "x",
             "source": "X / @RockstarGames",
             "title": f"{new} nieuwe post{'s' if new > 1 else ''} op X",
@@ -301,6 +311,8 @@ def collect(state):
 
             alerts.append(
                 {
+                    "uid": item["uid"],
+                    "key": key,
                     "priority": "gta6" if gta6 else "rockstar",
                     "source": item["source"],
                     "title": item["title"],
@@ -330,6 +342,25 @@ def collect(state):
     order = {"gta6": 0, "x": 1, "rockstar": 2}
     alerts.sort(key=lambda a: order.get(a["priority"], 9))
     return alerts
+
+
+def requeue(state, alert):
+    """Zet een alert die niet verstuurd kon worden terug in de wachtrij.
+
+    Zonder dit zou een item als 'gemeld' blijven staan terwijl het appje
+    nooit aankwam — en dan hoor je er nooit meer iets over. Precies het
+    soort stille storing waar je pas achter komt als je iets gemist hebt.
+    """
+    uid = alert.get("uid")
+    if uid and uid in state.get("seen_ids", []):
+        state["seen_ids"].remove(uid)
+
+    key = alert.get("key")
+    if key and key in state.get("alerted_titles", []):
+        state["alerted_titles"].remove(key)
+
+    if alert.get("priority") == "x" and alert.get("prev_count") is not None:
+        state["x_tweet_count"] = alert["prev_count"]
 
 
 def format_alert(alert):
@@ -363,13 +394,24 @@ def main():
         log(f"{len(alerts)} alerts — afgekapt op {MAX_ALERTS_PER_RUN}")
         alerts = alerts[:MAX_ALERTS_PER_RUN]
 
+    sent = 0
+    failed = 0
     for i, alert in enumerate(alerts):
-        send_whatsapp(format_alert(alert))
+        if send_whatsapp(format_alert(alert)):
+            sent += 1
+        else:
+            failed += 1
+            requeue(state, alert)
+            log(f"  terug in de wachtrij: {alert['title'][:60]}")
         if i < len(alerts) - 1:
             time.sleep(6)  # CallMeBot wil rust tussen berichten
 
     save_state(state)
-    log(f"=== Klaar — {len(alerts)} alert(s) verstuurd ===")
+    if failed:
+        log(f"=== Klaar — {sent} verstuurd, {failed} MISLUKT "
+            f"(volgende run opnieuw geprobeerd) ===")
+        return 1
+    log(f"=== Klaar — {sent} alert(s) verstuurd ===")
     return 0
 
 
