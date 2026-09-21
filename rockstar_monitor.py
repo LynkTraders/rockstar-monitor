@@ -36,6 +36,13 @@ WATCH_X = os.environ.get("WATCH_X", "true").lower() == "true"
 # Droogloop: wel detecteren en loggen, niets versturen.
 DRY_RUN = os.environ.get("DRY_RUN", "false").lower() == "true"
 
+# Draait de monitor elke minuut, dan hoeven de trage bronnen niet elke keer
+# mee. Take-Two publiceert hooguit wekelijks, het YouTube-kanaal ook. Alleen
+# de Newswire wordt elke run bevraagd; die is de snelste officiele bron.
+# 1 = elke run alles (zo staat het op GitHub, dat maar paar keer per dag draait).
+SLOW_EVERY = max(1, int(os.environ.get("SLOW_EVERY", "1")))
+X_EVERY = max(1, int(os.environ.get("X_EVERY", "1")))
+
 STATE_FILE = os.environ.get("STATE_FILE", "monitor_state.json")
 MAX_ALERTS_PER_RUN = 8  # noodrem tegen een stortvloed
 
@@ -270,11 +277,18 @@ def collect(state):
     failed = []
     alerts = []
 
-    sources = [
-        ("Newswire", lambda: fetch_newswire()),
-        ("YouTube", lambda: fetch_rss("Rockstar YouTube", YOUTUBE_FEED, "yt")),
-        ("Take-Two IR", lambda: fetch_rss("Take-Two IR", TAKETWO_FEED, "ttwo")),
-    ]
+    run_no = state.get("run_no", 0) + 1
+    state["run_no"] = run_no
+    slow_turn = first_run or run_no % SLOW_EVERY == 0
+
+    sources = [("Newswire", lambda: fetch_newswire())]
+    if slow_turn:
+        sources += [
+            ("YouTube", lambda: fetch_rss("Rockstar YouTube", YOUTUBE_FEED, "yt")),
+            ("Take-Two IR", lambda: fetch_rss("Take-Two IR", TAKETWO_FEED, "ttwo")),
+        ]
+    else:
+        log(f"run {run_no}: alleen Newswire (trage bronnen elke {SLOW_EVERY} runs)")
 
     for name, fetcher in sources:
         try:
@@ -326,7 +340,7 @@ def collect(state):
     state["seen_ids"] = sorted(seen)[-3000:]
     state["alerted_titles"] = alerted_titles[-500:]
 
-    if WATCH_X:
+    if WATCH_X and (first_run or run_no % X_EVERY == 0):
         check_x(state, alerts)
 
     if first_run:

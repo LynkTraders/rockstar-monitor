@@ -2,7 +2,10 @@ name: Rockstar Monitor
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    # Vangnet, geen hoofdroute. De Mac kijkt elke minuut; dit vangt de
+    # periodes op dat die uit staat of slaapt. GitHub knijpt hoogfrequente
+    # schema's toch af tot eens per paar uur, dus */5 was fictie.
+    - cron: '7 */6 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
