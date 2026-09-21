@@ -59,8 +59,65 @@ Op `true` blijft daar ongeveer één bericht per twee weken van over.
 **Actions → Rockstar Monitor → Run workflow.** Vink eventueel *dry run* aan om
 te kijken wat hij zou versturen zonder dat er iets verstuurd wordt.
 
-Daarna draait hij vanzelf elke 5 minuten. GitHub voert `schedule`-workflows
-niet op de seconde uit; reken op 5 tot 20 minuten vertraging bij drukte.
+## Waar hij draait
+
+Op twee plekken, met een gedeelde state:
+
+| | Frequentie | Rol |
+|---|---|---|
+| **Mac** (launchd) | elke minuut | De echte monitor |
+| **GitHub Actions** | elke 6 uur | Vangnet voor als de Mac uit staat |
+
+Ze delen `monitor_state.json` via de repo: de Mac pullt voor elke run en pusht
+alleen als er iets veranderd is. Wie een bericht als eerste ziet, meldt het;
+de ander ziet dan dat het al gemeld is. Geen dubbele appjes.
+
+### Waarom GitHub niet de hoofdroute is
+
+De cron stond eerst op `*/5`. Gemeten over 62 uur leverde dat **21 runs op in
+plaats van 743** — 3% van wat er gevraagd werd, met gaten tot 5,5 uur. GitHub
+knijpt geplande workflows op gratis accounts af en geeft hoogfrequente schema's
+de laagste prioriteit. De runs blijven groen, dus je ziet het niet. Vandaar de
+Mac voor snelheid en GitHub voor dekking.
+
+### Installatie op de Mac
+
+```bash
+git clone https://github.com/LynkTraders/rockstar-monitor.git ~/Developer/rockstar-monitor
+cd ~/Developer/rockstar-monitor
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+
+mkdir -p ~/.config/rockstar-monitor
+cat > ~/.config/rockstar-monitor/env <<'EOF'
+WHATSAPP_PHONE=316xxxxxxxx
+WHATSAPP_APIKEY=xxxxxxx
+EOF
+chmod 600 ~/.config/rockstar-monitor/env
+
+sed "s|REPLACE_HOME|$HOME|g" mac/com.dennisweber.rockstar-monitor.plist \
+  > ~/Library/LaunchAgents/com.dennisweber.rockstar-monitor.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.dennisweber.rockstar-monitor.plist
+```
+
+De credentials staan met opzet **buiten de repo** — die is publiek.
+
+Log: `~/Library/Logs/rockstar-monitor.log`. Stoppen:
+`launchctl bootout gui/$(id -u)/com.dennisweber.rockstar-monitor`.
+
+### Bronnen niet elke minuut lastigvallen
+
+Alle vier de bronnen elke minuut bevragen is 5.760 verzoeken per dag. Take-Two
+publiceert hooguit wekelijks en fxtwitter is een kleine vrijwilligersdienst.
+Daarom verdeelt de Mac ze (`SLOW_EVERY=5`, `X_EVERY=3`):
+
+| Bron | Frequentie | Per dag |
+|---|---|---|
+| Newswire | elke run | 1.440 |
+| X-teller | elke 3e run | 480 |
+| YouTube | elke 5e run | 288 |
+| Take-Two IR | elke 5e run | 288 |
+
+Op GitHub staan beide op `1` — dat draait maar een paar keer per dag.
 
 ## Ruisbeheersing
 
@@ -71,6 +128,10 @@ niet op de seconde uit; reken op 5 tot 20 minuten vertraging bij drukte.
 - **Take-Two wordt gefilterd.** NBA 2K, Zynga en WWE gaan eruit; alleen
   Rockstar, Grand Theft Auto en Red Dead blijven over.
 - **Maximaal 8 appjes per run**, als noodrem.
+- **Een mislukt appje telt niet als verstuurd.** Kan CallMeBot niet bereikt
+  worden, dan draait het item zijn eigen state-wijziging terug en probeert de
+  volgende run het opnieuw. Zonder dat zou een item als gemeld blijven staan
+  terwijl het appje nooit aankwam — en dan hoor je er nooit meer iets over.
 
 ## Lokaal testen
 
@@ -88,5 +149,7 @@ vanaf nul beginnen: verwijder `monitor_state.json`.
 |---|---|
 | `rockstar_monitor.py` | Het script |
 | `.github/workflows/monitor.yml` | De planning |
-| `monitor_state.json` | Wat al gezien is — wordt automatisch bijgewerkt |
+| `monitor_state.json` | Wat al gezien is — gedeeld tussen Mac en GitHub |
+| `mac/run.sh` | Wrapper die de Mac elke minuut draait |
+| `mac/*.plist` | launchd-sjabloon |
 | `requirements.txt` | `feedparser`, `requests` |
