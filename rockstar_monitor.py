@@ -414,7 +414,33 @@ def format_alert(alert):
     return "\n".join(lines)
 
 
+def send_test():
+    """Stuurt een testappje, zodat je kunt controleren of de ketting klopt.
+
+    Zonder dit is 'geen appje' niet te onderscheiden van 'stuk': als Rockstar
+    niets publiceert hoort de monitor stil te zijn, en dat ziet er precies
+    hetzelfde uit als een verkeerde apikey.
+    """
+    log("=== Testbericht ===")
+    now = datetime.now().strftime("%d-%m-%Y %H:%M")
+    ok = send_whatsapp(
+        "ROCKSTAR MONITOR — TEST\n\n"
+        "Als je dit leest werkt de verbinding met CallMeBot.\n"
+        f"Verstuurd op {now}.\n\n"
+        "Dit is geen nieuws van Rockstar — die krijg je alleen als er "
+        "echt iets aangekondigd wordt."
+    )
+    if ok:
+        log("Testbericht verstuurd — check je WhatsApp")
+        return 0
+    log("Testbericht MISLUKT — controleer WHATSAPP_PHONE en WHATSAPP_APIKEY")
+    return 1
+
+
 def main():
+    if "--test" in sys.argv or os.environ.get("TEST", "").lower() == "true":
+        return send_test()
+
     log("=== Rockstar Monitor ===")
     log(f"filter={'alleen GTA VI' if ONLY_GTA6 else 'alles van Rockstar'} "
         f"x={'aan' if WATCH_X else 'uit'} dry_run={DRY_RUN}")
