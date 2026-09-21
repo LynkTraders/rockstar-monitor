@@ -44,6 +44,10 @@ SLOW_EVERY = max(1, int(os.environ.get("SLOW_EVERY", "1")))
 X_EVERY = max(1, int(os.environ.get("X_EVERY", "1")))
 
 STATE_FILE = os.environ.get("STATE_FILE", "monitor_state.json")
+# Het runnummer hoort niet in de gedeelde state: dat verandert elke run en
+# zou dus elke minuut een commit naar de repo opleveren. Bovendien is het
+# per machine verschillend -- de Mac draait vaker dan GitHub.
+RUN_FILE = os.environ.get("RUN_FILE", ".run_no")
 MAX_ALERTS_PER_RUN = 8  # noodrem tegen een stortvloed
 
 UA = (
@@ -84,6 +88,21 @@ def log(msg):
 
 
 # ── State ─────────────────────────────────────────────────────────────
+def next_run_no():
+    try:
+        with open(RUN_FILE) as f:
+            n = int(f.read().strip() or 0)
+    except (OSError, ValueError):
+        n = 0
+    n += 1
+    try:
+        with open(RUN_FILE, "w") as f:
+            f.write(str(n))
+    except OSError as e:
+        log(f"Runteller niet op te slaan: {e}")
+    return n
+
+
 def load_state():
     if os.path.exists(STATE_FILE):
         try:
@@ -277,8 +296,7 @@ def collect(state):
     failed = []
     alerts = []
 
-    run_no = state.get("run_no", 0) + 1
-    state["run_no"] = run_no
+    run_no = next_run_no()
     slow_turn = first_run or run_no % SLOW_EVERY == 0
 
     sources = [("Newswire", lambda: fetch_newswire())]
