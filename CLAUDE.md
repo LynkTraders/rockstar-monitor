@@ -94,6 +94,22 @@ Je ziet dan `HTTP 208` en in de body *"Your Account is Paused"*. De oplossing is
 dat **Dennis zelf** het woord `resume` naar +34 623 78 64 49 stuurt via WhatsApp;
 dat kan niet vanaf hier en de bestaande apikey blijft geldig.
 
+Dit gebeurde op 25-09 en 29-09, dus twee keer in acht dagen. Gaat het zo door,
+dan is CallMeBot te wankel voor iets waar Dennis op wil kunnen bouwen; ntfy.sh of
+Pushover doen hetzelfde zonder WhatsApp ertussen. Dat is met hem besproken en hij
+wacht het even af — breng het opnieuw ter sprake als het nog eens misgaat.
+
+### Bewaking van de aflevering
+
+`check_delivery_health()` telt mislukte afleveringen en toont na drie op rij een
+**macOS-melding** via `osascript`, met daarna hoogstens eens per zes uur een
+herinnering. Bewust niet via CallMeBot: dat is juist het kanaal dat stuk is.
+
+Dit bestaat omdat een kapot afleverkanaal anders onzichtbaar is. De monitor
+draait, de logs zien er normaal uit, en stilte is precies wat je verwacht als
+Rockstar niets publiceert. De tweede pauze lag daardoor vier dagen onopgemerkt.
+Haal deze bewaking niet weg omdat ze "overbodig" lijkt.
+
 ## Vanuit de cloud
 
 Een cloudsessie kan bij deze repo en bij GitHub Actions, maar **niet bij de Mac**.
