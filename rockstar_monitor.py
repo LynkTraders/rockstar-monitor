@@ -14,6 +14,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -48,6 +49,12 @@ STATE_FILE = os.environ.get("STATE_FILE", "monitor_state.json")
 # zou dus elke minuut een commit naar de repo opleveren. Bovendien is het
 # per machine verschillend -- de Mac draait vaker dan GitHub.
 RUN_FILE = os.environ.get("RUN_FILE", ".run_no")
+
+# Zoveel mislukte verzendingen op rij voordat er een macOS-melding komt.
+# Bewust laag: bij een pre-order telt elk kwartier.
+ALERT_AFTER_FAILURES = max(1, int(os.environ.get("ALERT_AFTER_FAILURES", "3")))
+# Daarna hoogstens eens per zoveel uur herinneren, anders wordt het zeuren.
+REMIND_EVERY_HOURS = float(os.environ.get("REMIND_EVERY_HOURS", "6"))
 MAX_ALERTS_PER_RUN = 8  # noodrem tegen een stortvloed
 
 UA = (
@@ -376,6 +383,60 @@ def collect(state):
     return alerts
 
 
+def notify_mac(title, message):
+    """macOS-melding. Bewust NIET via CallMeBot: dit is juist het kanaal dat
+    je nodig hebt als CallMeBot zelf stuk is."""
+    if sys.platform != "darwin":
+        return
+    script = (
+        f'display notification {json.dumps(message)} '
+        f'with title {json.dumps(title)} sound name "Basso"'
+    )
+    try:
+        subprocess.run(
+            ["osascript", "-e", script],
+            timeout=10, capture_output=True, check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as e:
+        log(f"macOS-melding mislukt: {type(e).__name__}")
+
+
+def check_delivery_health(state, failed, sent):
+    """Houdt bij hoe vaak de aflevering achter elkaar mislukt.
+
+    Zonder dit is een kapot afleverkanaal onzichtbaar: de monitor draait,
+    de logs zien er normaal uit, en stilte is precies wat je verwacht als
+    Rockstar niets publiceert. Je merkt het pas als je het toevallig
+    controleert -- en dat is bij een pre-order te laat.
+    """
+    if sent:
+        if state.get("delivery_failures"):
+            log("Aflevering werkt weer")
+        state["delivery_failures"] = 0
+        state.pop("last_delivery_warning", None)
+        return
+    if not failed:
+        return
+
+    n = state.get("delivery_failures", 0) + failed
+    state["delivery_failures"] = n
+    if n < ALERT_AFTER_FAILURES:
+        return
+
+    now = time.time()
+    last = state.get("last_delivery_warning", 0)
+    if now - last < REMIND_EVERY_HOURS * 3600:
+        return
+    state["last_delivery_warning"] = now
+
+    log(f"WAARSCHUWING: {n} mislukte afleveringen op rij — melding op de Mac")
+    notify_mac(
+        "Rockstar Monitor krijgt niets afgeleverd",
+        f"{n} pogingen mislukt. Meestal staat CallMeBot op pauze: "
+        f"stuur 'resume' naar +34 623 78 64 49 via WhatsApp.",
+    )
+
+
 def requeue(state, alert):
     """Zet een alert die niet verstuurd kon worden terug in de wachtrij.
 
@@ -463,6 +524,8 @@ def main():
             log(f"  terug in de wachtrij: {alert['title'][:60]}")
         if i < len(alerts) - 1:
             time.sleep(6)  # CallMeBot wil rust tussen berichten
+
+    check_delivery_health(state, failed, sent)
 
     save_state(state)
     if failed:
