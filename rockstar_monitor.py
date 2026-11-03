@@ -26,6 +26,12 @@ import requests
 WHATSAPP_PHONE = os.environ.get("WHATSAPP_PHONE", "").strip()
 WHATSAPP_APIKEY = os.environ.get("WHATSAPP_APIKEY", "").strip()
 
+# ntfy.sh: push zonder account. Werkt wel vanaf GitHub-runners, waar
+# CallMeBot HTTP 203 teruggeeft omdat het datacenter-IP's weigert.
+# De topicnaam is het enige geheim: wie hem kent, leest je meldingen.
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "").strip()
+NTFY_SERVER = os.environ.get("NTFY_SERVER", "https://ntfy.sh").rstrip("/")
+
 # "true" = alleen posts met een Grand Theft Auto VI-tag.
 # "false" = alles wat Rockstar officieel naar buiten brengt.
 ONLY_GTA6 = os.environ.get("ONLY_GTA6", "false").lower() == "true"
@@ -87,6 +93,11 @@ ROCKSTAR_MARKERS = GTA6_MARKERS + (
     "grand theft auto",
     "red dead",
 )
+
+
+def ascii_header(text):
+    """ntfy-headers moeten latin-1 zijn; titels bevatten soms em-dashes."""
+    return text.encode("ascii", "replace").decode("ascii")
 
 
 def log(msg):
@@ -401,6 +412,46 @@ def notify_mac(title, message):
         log(f"macOS-melding mislukt: {type(e).__name__}")
 
 
+def send_ntfy(title, body, link=None, priority="default"):
+    if not NTFY_TOPIC:
+        return None  # niet geconfigureerd: telt niet mee als mislukking
+    headers = {
+        "Title": ascii_header(title),
+        "Priority": priority,
+        "Tags": "video_game",
+    }
+    if link:
+        headers["Click"] = link
+    try:
+        r = requests.post(
+            f"{NTFY_SERVER}/{NTFY_TOPIC}",
+            data=body.encode("utf-8"),
+            headers=headers,
+            timeout=20,
+        )
+        ok = r.status_code == 200
+        log(f"ntfy {'verstuurd' if ok else 'MISLUKT'} (HTTP {r.status_code})")
+        return ok
+    except requests.RequestException as e:
+        log(f"ntfy fout: {type(e).__name__}")
+        return False
+
+
+def deliver(title, body, link=None, priority="default"):
+    """Stuurt via beide kanalen. Geslaagd zodra er een aankomt.
+
+    CallMeBot pauzeert geregeld en weigert datacenter-IP's; ntfy doet geen
+    van beide. Andersom is WhatsApp waar Dennis zijn meldingen verwacht.
+    Samen dekken ze elkaars gaten af.
+    """
+    results = [send_whatsapp(body), send_ntfy(title, body, link, priority)]
+    attempted = [r for r in results if r is not None]
+    if not attempted:
+        log("FOUT: geen enkel afleverkanaal geconfigureerd")
+        return False
+    return any(attempted)
+
+
 def check_delivery_health(state, failed, sent):
     """Houdt bij hoe vaak de aflevering achter elkaar mislukt.
 
@@ -484,17 +535,22 @@ def send_test():
     """
     log("=== Testbericht ===")
     now = datetime.now().strftime("%d-%m-%Y %H:%M")
-    ok = send_whatsapp(
+    body = (
         "ROCKSTAR MONITOR — TEST\n\n"
-        "Als je dit leest werkt de verbinding met CallMeBot.\n"
         f"Verstuurd op {now}.\n\n"
         "Dit is geen nieuws van Rockstar — die krijg je alleen als er "
         "echt iets aangekondigd wordt."
     )
-    if ok:
-        log("Testbericht verstuurd — check je WhatsApp")
+    wa = send_whatsapp(body)
+    nt = send_ntfy("Rockstar Monitor - test", body)
+
+    log(f"  WhatsApp : {'OK' if wa else 'mislukt'}")
+    log(f"  ntfy     : {'niet geconfigureerd' if nt is None else ('OK' if nt else 'mislukt')}")
+
+    if wa or nt:
+        log("Testbericht verstuurd")
         return 0
-    log("Testbericht MISLUKT — controleer WHATSAPP_PHONE en WHATSAPP_APIKEY")
+    log("Testbericht MISLUKT op alle kanalen")
     return 1
 
 
@@ -516,7 +572,9 @@ def main():
     sent = 0
     failed = 0
     for i, alert in enumerate(alerts):
-        if send_whatsapp(format_alert(alert)):
+        title = "GTA VI - Rockstar" if alert["priority"] == "gta6" else "Rockstar"
+        if deliver(title, format_alert(alert), alert.get("link"),
+                   "high" if alert["priority"] == "gta6" else "default"):
             sent += 1
         else:
             failed += 1

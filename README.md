@@ -37,6 +37,7 @@ tweet zelf. Wil je X helemaal niet, zet dan `WATCH_X` op `false`.
 |---|---|
 | `WHATSAPP_PHONE` | Telefoonnummer zonder `+`, bijv. `31612345678` |
 | `WHATSAPP_APIKEY` | CallMeBot API-key |
+| `NTFY_TOPIC` | Je ntfy-kanaalnaam (lang en willekeurig — wie hem kent, leest mee) |
 
 Geen key? Stuur `I allow callmebot to send me messages` via WhatsApp naar
 **+34 623 78 64 49**; je krijgt de key terug.
@@ -118,6 +119,19 @@ Daarom verdeelt de Mac ze (`SLOW_EVERY=5`, `X_EVERY=3`):
 | Take-Two IR | elke 5e run | 288 |
 
 Op GitHub staan beide op `1` — dat draait maar een paar keer per dag.
+
+## Twee afleverkanalen
+
+Elke melding gaat naar WhatsApp (CallMeBot) **en** naar ntfy.sh. Hij geldt als
+afgeleverd zodra er één aankomt.
+
+Dat is geen overdaad. CallMeBot pauzeert accounts geregeld en weigert
+datacenter-IP's met `HTTP 203` — waardoor de GitHub-helft van dit systeem in de
+eerste zes weken **geen enkel bericht** heeft afgeleverd, wat niemand merkte
+omdat runs groen kleuren als er niets te melden is. ntfy heeft beide problemen
+niet en werkt wel vanaf een runner.
+
+Installeer de ntfy-app (iOS/Android) en abonneer je op je kanaalnaam.
 
 ## Ruisbeheersing
 

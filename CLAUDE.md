@@ -72,8 +72,8 @@ URL, inclusief `?apikey=...`, en Actions-logs zijn hier openbaar.
 
 | Waar | Wat |
 |---|---|
-| `~/.config/rockstar-monitor/env` (Mac, chmod 600, buiten de repo) | `WHATSAPP_PHONE`, `WHATSAPP_APIKEY` |
-| GitHub → Settings → Secrets → Actions | dezelfde twee |
+| `~/.config/rockstar-monitor/env` (Mac, chmod 600, buiten de repo) | `WHATSAPP_PHONE`, `WHATSAPP_APIKEY`, `NTFY_TOPIC` |
+| GitHub → Settings → Secrets → Actions | dezelfde drie |
 
 GitHub-secrets zijn alleen schrijfbaar; je kunt ze niet uitlezen om ze elders in
 te vullen.
@@ -98,6 +98,29 @@ Dit gebeurde op 25-09 en 29-09, dus twee keer in acht dagen. Gaat het zo door,
 dan is CallMeBot te wankel voor iets waar Dennis op wil kunnen bouwen; ntfy.sh of
 Pushover doen hetzelfde zonder WhatsApp ertussen. Dat is met hem besproken en hij
 wacht het even af — breng het opnieuw ter sprake als het nog eens misgaat.
+
+### Twee kanalen, en waarom
+
+`deliver()` stuurt naar CallMeBot **en** ntfy.sh; geslaagd zodra er één aankomt.
+
+Op 03-11-2026 bleek uit de state-historie dat van de negen ooit afgeleverde
+meldingen er **negen van de Mac kwamen en nul van GitHub**. CallMeBot geeft
+runners `HTTP 203` terug — het weigert datacenter-IP's. Het vangnet bestond dus
+zes weken op papier. Dat viel niet op doordat runs groen kleuren zolang er niets
+te melden is; pas als er écht iets was faalde het, en dan rolde `requeue()` het
+terug zodat de Mac het later stuurde.
+
+Haal ntfy er niet uit "omdat WhatsApp het toch doet": vanaf GitHub doet WhatsApp
+het niet.
+
+### Slapende Mac
+
+launchd vuurt óók tijdens de slaapstand, maar dan is er geen netwerk: alle
+bronnen falen dan op DNS (`Failed to resolve ...`). De teller loopt gewoon door,
+dus een hoge runcount bewijst niets. Op 03-11 bleek dat de monitor van 02:47 tot
+09:00 volledig loos had gedraaid, en dat de aankondiging van 29-10 pas op 03-11
+was afgeleverd — vijf dagen later, toen Dennis zijn Mac weer opende. Daarom moet
+het GitHub-vangnet echt kunnen afleveren.
 
 ### Bewaking van de aflevering
 

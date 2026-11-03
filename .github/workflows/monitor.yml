@@ -38,6 +38,9 @@ jobs:
         env:
           WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
           WHATSAPP_APIKEY: ${{ secrets.WHATSAPP_APIKEY }}
+          # CallMeBot weigert datacenter-IP's (HTTP 203), dus vanaf hier is
+          # ntfy het enige kanaal dat daadwerkelijk aflevert.
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           # Zet op 'true' voor uitsluitend GTA VI-berichten.
           ONLY_GTA6: ${{ vars.ONLY_GTA6 || 'false' }}
           WATCH_X: ${{ vars.WATCH_X || 'true' }}
