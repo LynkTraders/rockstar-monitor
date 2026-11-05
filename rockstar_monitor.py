@@ -254,16 +254,36 @@ def fetch_rss(source, url, prefix, attempts=2):
 
 
 # ── Bron 4: X-teller ──────────────────────────────────────────────────
+def fetch_x_count(attempts=4):
+    """Haalt de tweetteller op, met herpogingen.
+
+    fxtwitter geeft geregeld een onterechte 404 "User not found" terug --
+    gemeten zes op de tien. Zonder herpogingen ben je daardoor minuten
+    blind, precies op het moment dat er iets gebeurt.
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            r = requests.get(X_PROFILE_API, headers={"User-Agent": UA}, timeout=15)
+            if r.status_code == 404:
+                raise requests.HTTPError("404 (fxtwitter hapert)")
+            r.raise_for_status()
+            count = (r.json().get("user") or {}).get("tweets")
+            if not isinstance(count, int):
+                raise ValueError("geen tweetteller in respons")
+            if attempt > 1:
+                log(f"X: gelukt bij poging {attempt}")
+            return count
+        except (requests.RequestException, ValueError) as e:
+            if attempt == attempts:
+                log(f"X fout na {attempts} pogingen: {e}")
+                return None
+            time.sleep(2)
+    return None
+
+
 def check_x(state, alerts):
-    try:
-        r = requests.get(X_PROFILE_API, headers={"User-Agent": UA}, timeout=20)
-        r.raise_for_status()
-        count = (r.json().get("user") or {}).get("tweets")
-        if not isinstance(count, int):
-            log("X: geen tweetteller in respons")
-            return
-    except (requests.RequestException, ValueError) as e:
-        log(f"X fout: {e}")
+    count = fetch_x_count()
+    if count is None:
         return
 
     previous = state.get("x_tweet_count")

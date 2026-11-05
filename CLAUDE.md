@@ -36,7 +36,7 @@ meldt het; de ander ziet dan dat het al gemeld is. Geen dubbele appjes.
 | Rockstar Newswire | GraphQL persisted query op `graph.rockstargames.com` | Geen key nodig. Levert tags per game, waarop GTA VI herkend wordt. |
 | Rockstar YouTube | RSS, channel `UC6VcWc1rAoWdBCM0JxrRQ3A` | Geeft af en toe kapotte XML; krijgt daarom een tweede poging. |
 | Take-Two IR | RSS | Gefilterd op Rockstar-titels: hier komt ook NBA 2K, Zynga en WWE langs. |
-| X / @RockstarGames | `api.fxtwitter.com`, alleen de tweetteller | Zie hieronder. |
+| X / @RockstarGames | `api.fxtwitter.com`, alleen de tweetteller | Geeft in ~6 van de 10 gevallen een onterechte 404 "User not found". `fetch_x_count()` probeert daarom vier keer; dat bracht het van 4/10 naar 10/10. Haal die herpogingen er niet uit. |
 
 **X levert géén tekst.** De inhoud van tweets is sinds de API-wijzigingen niet
 gratis op te halen: Nitter is dood, de publieke RSS-bruggen zijn dood, en de
