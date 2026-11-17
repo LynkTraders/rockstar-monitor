@@ -46,7 +46,9 @@
   ],
   "bootstrapped": true,
   "delivery_failures": 0,
-  "reviewed_outlets": [],
+  "reviewed_outlets": [
+    "VGC"
+  ],
   "seen_ids": [
     "newswire:17857581o753k1",
     "newswire:1788115957a317",
