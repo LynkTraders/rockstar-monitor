@@ -32,6 +32,12 @@ WHATSAPP_APIKEY = os.environ.get("WHATSAPP_APIKEY", "").strip()
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "").strip()
 NTFY_SERVER = os.environ.get("NTFY_SERVER", "https://ntfy.sh").rstrip("/")
 
+# Reviewbewaking. Dit is de ENIGE plek waar gamingpers wordt gelezen, en
+# alleen voor recensies van GTA VI -- niet voor nieuws, want dat was nou
+# juist de ruis waar dit systeem de voorganger voor verving. Na deze datum
+# stopt het vanzelf, zodat de pers niet alsnog binnensluipt.
+REVIEWS_UNTIL = os.environ.get("REVIEWS_UNTIL", "2026-12-07")
+
 # "true" = alleen posts met een Grand Theft Auto VI-tag.
 # "false" = alles wat Rockstar officieel naar buiten brengt.
 ONLY_GTA6 = os.environ.get("ONLY_GTA6", "false").lower() == "true"
@@ -78,6 +84,23 @@ YOUTUBE_FEED = (
     "?channel_id=UC6VcWc1rAoWdBCM0JxrRQ3A"  # Rockstar Games
 )
 TAKETWO_FEED = "https://ir.take2games.com/rss/news-releases.xml"
+
+# (naam, feed, is_pure_reviewfeed). Bij een pure reviewfeed is elk
+# GTA VI-item per definitie een recensie; bij de rest moet er ook een
+# reviewwoord in staan.
+REVIEW_FEEDS = [
+    ("IGN",       "https://feeds.ign.com/ign/games-all",        False),
+    ("GameSpot",  "https://www.gamespot.com/feeds/reviews/",    True),
+    ("Eurogamer", "https://www.eurogamer.net/feed",             False),
+    ("VGC",       "https://www.videogameschronicle.com/feed/",  False),
+    ("PC Gamer",  "https://www.pcgamer.com/rss/",               False),
+    ("Polygon",   "https://www.polygon.com/rss/index.xml",      False),
+]
+
+REVIEW_MARKERS = (
+    "review", "reviewed", "verdict", "score", "/10", "out of 10",
+    "recensie",
+)
 X_PROFILE_API = "https://api.fxtwitter.com/rockstargames"
 X_URL = "https://x.com/RockstarGames"
 
@@ -315,6 +338,55 @@ def is_gta6(item):
     return any(m in item["haystack"] for m in GTA6_MARKERS)
 
 
+def reviews_active():
+    try:
+        until = datetime.strptime(REVIEWS_UNTIL, "%Y-%m-%d").date()
+    except ValueError:
+        log(f"REVIEWS_UNTIL ongeldig ({REVIEWS_UNTIL!r}) — reviewbewaking uit")
+        return False
+    return datetime.now(timezone.utc).date() <= until
+
+
+def collect_reviews(state, alerts):
+    """Een appje per outlet, niet per artikel.
+
+    Als de reviews vallen publiceert iedereen tegelijk, en daarna nog
+    follow-ups, video-versies en 'review in progress'-updates. Je wilt
+    weten dát IGN er is, niet zes keer.
+    """
+    done = set(state.get("reviewed_outlets", []))
+
+    for outlet, url, pure in REVIEW_FEEDS:
+        if outlet in done:
+            continue
+        try:
+            items = fetch_rss(outlet, url, f"rev-{outlet}")
+        except Exception as e:
+            log(f"Reviewfeed '{outlet}' mislukt: {e}")
+            continue
+
+        for item in items:
+            if not is_gta6(item):
+                continue
+            if not pure and not any(m in item["haystack"] for m in REVIEW_MARKERS):
+                continue
+
+            done.add(outlet)
+            alerts.append({
+                "priority": "review",
+                "outlet": outlet,
+                "source": outlet,
+                "title": item["title"],
+                "link": item["link"],
+                "date": item["date"],
+                "tags": [],
+            })
+            log(f"  REVIEW [{outlet}] {item['title'][:60]}")
+            break
+
+    state["reviewed_outlets"] = sorted(done)
+
+
 def title_key(title):
     """Normaliseer een titel zodat regio-varianten en cross-post duplicaten
     van dezelfde aankondiging als een en hetzelfde item tellen."""
@@ -399,6 +471,9 @@ def collect(state):
     if WATCH_X and (first_run or run_no % X_EVERY == 0):
         check_x(state, alerts)
 
+    if slow_turn and reviews_active():
+        collect_reviews(state, alerts)
+
     if first_run:
         if failed:
             log(f"Eerste run: bron(nen) {', '.join(failed)} mislukt — "
@@ -409,7 +484,7 @@ def collect(state):
         return []
 
     # Nieuwste bovenaan, GTA VI eerst.
-    order = {"gta6": 0, "x": 1, "rockstar": 2}
+    order = {"gta6": 0, "review": 1, "x": 2, "rockstar": 3}
     alerts.sort(key=lambda a: order.get(a["priority"], 9))
     return alerts
 
@@ -523,12 +598,19 @@ def requeue(state, alert):
     if key and key in state.get("alerted_titles", []):
         state["alerted_titles"].remove(key)
 
+    if alert.get("priority") == "review" and alert.get("outlet"):
+        outlets = state.get("reviewed_outlets", [])
+        if alert["outlet"] in outlets:
+            outlets.remove(alert["outlet"])
+
     if alert.get("priority") == "x" and alert.get("prev_count") is not None:
         state["x_tweet_count"] = alert["prev_count"]
 
 
 def format_alert(alert):
-    if alert["priority"] == "gta6":
+    if alert["priority"] == "review":
+        head = f"GTA VI REVIEW — {alert['outlet']}"
+    elif alert["priority"] == "gta6":
         head = "GTA VI — OFFICIEEL VAN ROCKSTAR"
     elif alert["priority"] == "x":
         head = "ROCKSTAR OP X"
@@ -592,9 +674,15 @@ def main():
     sent = 0
     failed = 0
     for i, alert in enumerate(alerts):
-        title = "GTA VI - Rockstar" if alert["priority"] == "gta6" else "Rockstar"
+        if alert["priority"] == "review":
+            title = f"GTA VI review - {alert['outlet']}"
+        elif alert["priority"] == "gta6":
+            title = "GTA VI - Rockstar"
+        else:
+            title = "Rockstar"
+        urgent = alert["priority"] in ("gta6", "review")
         if deliver(title, format_alert(alert), alert.get("link"),
-                   "high" if alert["priority"] == "gta6" else "default"):
+                   "high" if urgent else "default"):
             sent += 1
         else:
             failed += 1

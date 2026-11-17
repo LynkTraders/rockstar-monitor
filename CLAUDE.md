@@ -16,6 +16,12 @@ iets echt is, komt het van hen. Liever een bericht te laat dan tien te veel.
 > Voeg geen gamingpers, aggregators, Reddit of nieuws-API's toe. Dat is precies
 > het probleem dat deze versie oplost. Vraag het eerst aan Dennis.
 
+**Eén uitzondering, bewust en begrensd:** `collect_reviews()` leest rond de
+release van GTA VI wél zes grote outlets, maar uitsluitend voor *recensies* van
+GTA VI, met één bericht per outlet, en het schakelt zichzelf uit na
+`REVIEWS_UNTIL` (standaard 07-12-2026). Dennis vroeg hier op 17-11 expliciet om.
+Dat is geen precedent om nieuws van die outlets toe te laten.
+
 ## Architectuur
 
 Twee runners, één gedeelde state:

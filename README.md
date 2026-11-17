@@ -120,6 +120,21 @@ Daarom verdeelt de Mac ze (`SLOW_EVERY=5`, `X_EVERY=3`):
 
 Op GitHub staan beide op `1` — dat draait maar een paar keer per dag.
 
+## Reviewbewaking (tijdelijk)
+
+Rond de release van GTA VI kijkt de monitor ook naar recensies bij IGN,
+GameSpot, Eurogamer, VGC, PC Gamer en Polygon.
+
+Dit is de enige plek waar gamingpers gelezen wordt, en uitsluitend voor
+recensies van GTA VI — niet voor nieuws, want dat was precies de ruis waar dit
+systeem de voorganger voor verving. Je krijgt **één bericht per outlet**: als de
+reviews vallen publiceert iedereen tegelijk, gevolgd door video-versies en
+follow-ups, en je wilt weten dát IGN er is, niet zes keer.
+
+Het stopt vanzelf na de datum in `REVIEWS_UNTIL` (standaard 7 december 2026), zodat
+de pers er niet ongemerkt in blijft hangen. Wil je het eerder uit: zet die
+variabele op een datum in het verleden.
+
 ## Twee afleverkanalen
 
 Elke melding gaat naar WhatsApp (CallMeBot) **en** naar ntfy.sh. Hij geldt als
