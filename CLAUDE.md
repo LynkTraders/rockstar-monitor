@@ -22,6 +22,13 @@ GTA VI, met één bericht per outlet, en het schakelt zichzelf uit na
 `REVIEWS_UNTIL` (standaard 07-12-2026). Dennis vroeg hier op 17-11 expliciet om.
 Dat is geen precedent om nieuws van die outlets toe te laten.
 
+**Reviewmeldingen zijn bewust spoilervrij:** geen titel, geen cijfer, geen link.
+Reviewtitels verraden vaak het oordeel ("... review - a masterpiece") en WhatsApp
+toont bij een link een voorvertoning met kop en samenvatting. Dennis wil alleen
+weten dát een review er is en kijkt hem daarna zelf, zonder vooraf iets te weten.
+Ook het log noemt de titel niet. Zet die er niet terug. En noem in een gesprek
+met Dennis nooit een cijfer, oordeel of reviewtitel die je zelf tegenkomt.
+
 ## Architectuur
 
 Twee runners, één gedeelde state:

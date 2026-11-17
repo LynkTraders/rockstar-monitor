@@ -381,7 +381,7 @@ def collect_reviews(state, alerts):
                 "date": item["date"],
                 "tags": [],
             })
-            log(f"  REVIEW [{outlet}] {item['title'][:60]}")
+            log(f"  REVIEW [{outlet}] gevonden (titel bewust niet gelogd: spoilers)")
             break
 
     state["reviewed_outlets"] = sorted(done)
@@ -609,8 +609,16 @@ def requeue(state, alert):
 
 def format_alert(alert):
     if alert["priority"] == "review":
-        head = f"GTA VI REVIEW — {alert['outlet']}"
-    elif alert["priority"] == "gta6":
+        # Spoilervrij, met opzet. Reviewtitels verraden vaak het oordeel
+        # ("... review - a masterpiece") en WhatsApp toont bij een link een
+        # voorvertoning met kop en samenvatting, waar het cijfer in staat.
+        # Dennis wil alleen weten DAT de review er is; kijken doet hij zelf.
+        return (
+            f"GTA VI REVIEW — {alert['outlet']}\n\n"
+            f"De review van {alert['outlet']} staat online.\n"
+            "Geen titel, cijfer of link in dit bericht, om spoilers te voorkomen."
+        )
+    if alert["priority"] == "gta6":
         head = "GTA VI — OFFICIEEL VAN ROCKSTAR"
     elif alert["priority"] == "x":
         head = "ROCKSTAR OP X"
@@ -681,7 +689,8 @@ def main():
         else:
             title = "Rockstar"
         urgent = alert["priority"] in ("gta6", "review")
-        if deliver(title, format_alert(alert), alert.get("link"),
+        link = None if alert["priority"] == "review" else alert.get("link")
+        if deliver(title, format_alert(alert), link,
                    "high" if urgent else "default"):
             sent += 1
         else:
