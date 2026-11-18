@@ -47,7 +47,7 @@
   "bootstrapped": true,
   "delivery_failures": 0,
   "last_pending_warning": 1795026982.7324889,
-  "pending_retry_at": 1795030819.057568,
+  "pending_retry_at": 1795031161.736256,
   "pending_whatsapp": [
     {
       "body": "GTA VI REVIEW \u2014 IGN\n\nDe review van IGN staat online.\nGeen titel, cijfer of link in dit bericht, om spoilers te voorkomen.",
@@ -80,6 +80,10 @@
     {
       "body": "ROCKSTAR OP X\n\n1 nieuwe post op X\nX / @RockstarGames\n\nhttps://x.com/RockstarGames",
       "ts": 1795021747.503863
+    },
+    {
+      "body": "ROCKSTAR OP X\n\n1 nieuwe post op X\nX / @RockstarGames\n\nhttps://x.com/RockstarGames",
+      "ts": 1795031161.736057
     }
   ],
   "reviewed_outlets": [
@@ -162,5 +166,5 @@
     "yt:e45e4cf185d737cb",
     "yt:eab10e90f93e17ae"
   ],
-  "x_tweet_count": 18481
+  "x_tweet_count": 18482
 }
