@@ -161,3 +161,10 @@ Draait sinds 21-09. Mediaan interval op de Mac 61 seconden; de enige onderbrekin
 was een nacht waarin de Mac sliep, door GitHub opgevangen. Nul appjes verstuurd,
 want Rockstar heeft sinds 17-09 niets gepubliceerd — dat is correct gedrag, geen
 storing. De macOS-upgrade naar Darwin 27 heeft launchd niet gesloopt.
+
+## WhatsApp-nastuurwachtrij (18-11-2026)
+Op reviewdag lag CallMeBot zelf plat (HTTP 207, "Service is down (410)"). ntfy kwam aan, dus
+de alerts telden als verstuurd en WhatsApp bleef leeg. Sindsdien: mislukt alleen WhatsApp, dan
+gaat het bericht naar `pending_whatsapp` in de state en wordt het elke 5 min opnieuw geprobeerd
+(max 72 uur). Blijft het >15 min hangen, dan volgt een Mac-melding. Reviewtitels komen ook in
+foutlogs nooit voor.

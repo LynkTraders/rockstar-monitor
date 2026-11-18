@@ -46,6 +46,28 @@
   ],
   "bootstrapped": true,
   "delivery_failures": 0,
+  "pending_whatsapp": [
+    {
+      "body": "GTA VI REVIEW \u2014 IGN\n\nDe review van IGN staat online.\nGeen titel, cijfer of link in dit bericht, om spoilers te voorkomen.",
+      "ts": 1795004324.904395
+    },
+    {
+      "body": "GTA VI REVIEW \u2014 GameSpot\n\nDe review van GameSpot staat online.\nGeen titel, cijfer of link in dit bericht, om spoilers te voorkomen.",
+      "ts": 1795004324.904396
+    },
+    {
+      "body": "GTA VI REVIEW \u2014 Eurogamer\n\nDe review van Eurogamer staat online.\nGeen titel, cijfer of link in dit bericht, om spoilers te voorkomen.",
+      "ts": 1795004324.904396
+    },
+    {
+      "body": "GTA VI REVIEW \u2014 VGC\n\nDe review van VGC staat online.\nGeen titel, cijfer of link in dit bericht, om spoilers te voorkomen.",
+      "ts": 1795004324.904397
+    },
+    {
+      "body": "GTA VI REVIEW \u2014 Polygon\n\nDe review van Polygon staat online.\nGeen titel, cijfer of link in dit bericht, om spoilers te voorkomen.",
+      "ts": 1795004324.904397
+    }
+  ],
   "reviewed_outlets": [
     "Eurogamer",
     "GameSpot",

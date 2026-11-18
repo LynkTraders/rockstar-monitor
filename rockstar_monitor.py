@@ -532,19 +532,69 @@ def send_ntfy(title, body, link=None, priority="default"):
         return False
 
 
-def deliver(title, body, link=None, priority="default"):
+def deliver(title, body, link=None, priority="default", state=None):
     """Stuurt via beide kanalen. Geslaagd zodra er een aankomt.
 
-    CallMeBot pauzeert geregeld en weigert datacenter-IP's; ntfy doet geen
-    van beide. Andersom is WhatsApp waar Dennis zijn meldingen verwacht.
-    Samen dekken ze elkaars gaten af.
+    CallMeBot pauzeert geregeld, weigert datacenter-IP's en ligt soms
+    gewoon plat (18-11-2026, reviewdag: HTTP 207 "Service is down").
+    ntfy doet geen van beide. Andersom is WhatsApp waar Dennis zijn
+    meldingen verwacht -- dus als alleen WhatsApp mislukt, gaat het bericht
+    in een aparte wachtrij en wordt het nagestuurd zodra CallMeBot weer werkt.
     """
-    results = [send_whatsapp(body), send_ntfy(title, body, link, priority)]
-    attempted = [r for r in results if r is not None]
+    wa = send_whatsapp(body)
+    nt = send_ntfy(title, body, link, priority)
+    attempted = [r for r in (wa, nt) if r is not None]
     if not attempted:
         log("FOUT: geen enkel afleverkanaal geconfigureerd")
         return False
+    if nt and wa is False and state is not None:
+        state.setdefault("pending_whatsapp", []).append(
+            {"body": body, "ts": time.time()})
+        log("  WhatsApp nagestuurd zodra CallMeBot weer werkt (ntfy is wel aangekomen)")
     return any(attempted)
+
+
+PENDING_RETRY_MINUTES = 5
+PENDING_MAX_AGE_HOURS = 72
+
+
+def retry_pending_whatsapp(state):
+    """Stuurt WhatsApp-berichten na die eerder alleen via ntfy aankwamen."""
+    pending = state.get("pending_whatsapp") or []
+    if not pending or DRY_RUN:
+        return
+    now = time.time()
+    pending = [p for p in pending if now - p["ts"] < PENDING_MAX_AGE_HOURS * 3600]
+    if now - state.get("pending_retry_at", 0) < PENDING_RETRY_MINUTES * 60:
+        state["pending_whatsapp"] = pending
+        return
+    state["pending_retry_at"] = now
+    log(f"{len(pending)} WhatsApp-bericht(en) in de nastuur-wachtrij — opnieuw proberen")
+    remaining = []
+    for i, p in enumerate(pending):
+        if remaining:  # eerste mislukte poging: rest deze ronde niet proberen
+            remaining.append(p)
+            continue
+        if send_whatsapp(p["body"]):
+            if i < len(pending) - 1:
+                time.sleep(6)
+        else:
+            remaining.append(p)
+    state["pending_whatsapp"] = remaining
+    if not remaining:
+        state.pop("pending_whatsapp", None)
+        state.pop("last_pending_warning", None)
+        log("Nastuur-wachtrij leeg: alles alsnog via WhatsApp verstuurd")
+        return
+    oldest = min(p["ts"] for p in remaining)
+    if (now - oldest > 15 * 60 and
+            now - state.get("last_pending_warning", 0) > REMIND_EVERY_HOURS * 3600):
+        state["last_pending_warning"] = now
+        notify_mac(
+            "Rockstar Monitor: WhatsApp levert niet af",
+            f"{len(remaining)} melding(en) alleen via ntfy aangekomen. "
+            "Kijk in de ntfy-app; WhatsApp wordt nagestuurd zodra CallMeBot weer werkt.",
+        )
 
 
 def check_delivery_health(state, failed, sent):
@@ -691,16 +741,19 @@ def main():
         urgent = alert["priority"] in ("gta6", "review")
         link = None if alert["priority"] == "review" else alert.get("link")
         if deliver(title, format_alert(alert), link,
-                   "high" if urgent else "default"):
+                   "high" if urgent else "default", state):
             sent += 1
         else:
             failed += 1
             requeue(state, alert)
-            log(f"  terug in de wachtrij: {alert['title'][:60]}")
+            what = (f"review {alert['outlet']}" if alert["priority"] == "review"
+                    else alert["title"][:60])  # reviewtitels nooit loggen: spoilers
+            log(f"  terug in de wachtrij: {what}")
         if i < len(alerts) - 1:
             time.sleep(6)  # CallMeBot wil rust tussen berichten
 
     check_delivery_health(state, failed, sent)
+    retry_pending_whatsapp(state)
 
     save_state(state)
     if failed:
