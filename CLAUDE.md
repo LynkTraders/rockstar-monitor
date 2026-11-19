@@ -173,3 +173,9 @@ foutlogs nooit voor.
 Op releasedag liep de tweetteller steeds op door antwoorden/reposts die niet op het profiel
 zichtbaar zijn -> reeks loze "ROCKSTAR OP X"-meldingen. Nu triggert alleen `media_count`
 (posts met afbeelding/video). Tekst-only posts worden gemist; officieel nieuws komt via Newswire.
+
+## Rockstar Store (19-11-2026)
+Dennis wacht op de fysieke GTA VI-kaart, die "de komende dagen" in de Rockstar Store komt;
+onzeker of daar een Newswire-bericht over komt. `fetch_store()` leest de sitemap van
+store.rockstargames.com (Engelse product-URL's zonder taalprefix, cache-bust via `?t=`), elke
+5 runs. Nieuwe product-URL = alert "NIEUW IN DE ROCKSTAR STORE". Eerste keer stil ingelezen.

@@ -344,6 +344,52 @@ def check_x(state, alerts):
     )
 
 
+# ── Bron: Rockstar Store ──────────────────────────────────────────────
+STORE_BASE = "https://store.rockstargames.com"
+STORE_SITEMAP = STORE_BASE + "/sitemap.xml"
+_LOCALE = re.compile(r"^[a-z]{2}(-[A-Za-z0-9]+)?$")
+
+
+def store_title(path):
+    slug = path.rstrip("/").split("/")[-1]
+    slug = re.sub(r"^buy-", "", slug)
+    t = " ".join(w.capitalize() for w in slug.split("-"))
+    t = re.sub(r"\bGta\b", "GTA", t)
+    return re.sub(r"\b(Ii|Iii|Iv|Vi)\b", lambda m: m.group(1).upper(), t)
+
+
+def fetch_store():
+    """Productpagina's uit de sitemap van de Rockstar Store.
+
+    Toegevoegd 19-11-2026: de fysieke GTA VI-kaart komt "de komende dagen" in
+    de Store, en het is onzeker of Rockstar daar een Newswire-bericht over
+    maakt. De sitemap bevat elk product (Engelse URL's zonder taalprefix).
+    De query-parameter omzeilt de CDN-cache, anders kan hij een dag oud zijn.
+    """
+    r = requests.get(STORE_SITEMAP, params={"t": int(time.time())},
+                     headers={"User-Agent": UA}, timeout=30)
+    r.raise_for_status()
+    items = []
+    for url in re.findall(r"<loc>([^<]+)</loc>", r.text):
+        path = re.sub(r"^https?://store\.rockstargames\.com/?", "", url.strip())
+        parts = [x for x in path.split("/") if x]
+        if len(parts) < 2 or _LOCALE.match(parts[0]):
+            continue
+        title = store_title(path)
+        items.append({
+            "uid": "store-" + "/".join(parts),
+            "source": "Rockstar Store",
+            "title": title,
+            "link": f"{STORE_BASE}/{'/'.join(parts)}",
+            "date": "",
+            "tags": [],
+            "haystack": (title + " " + path.replace("-", " ")).lower(),
+        })
+    if not items:
+        raise ValueError("geen producten in sitemap")
+    return items
+
+
 # ── Filteren ──────────────────────────────────────────────────────────
 def is_gta6(item):
     return any(m in item["haystack"] for m in GTA6_MARKERS)
@@ -425,6 +471,7 @@ def collect(state):
         sources += [
             ("YouTube", lambda: fetch_rss("Rockstar YouTube", YOUTUBE_FEED, "yt")),
             ("Take-Two IR", lambda: fetch_rss("Take-Two IR", TAKETWO_FEED, "ttwo")),
+            ("Rockstar Store", fetch_store),
         ]
     else:
         log(f"run {run_no}: alleen Newswire (trage bronnen elke {SLOW_EVERY} runs)")
@@ -438,6 +485,12 @@ def collect(state):
             continue
 
         log(f"Bron '{name}': {len(items)} items opgehaald")
+        # Later toegevoegde bron: eerst stil inlezen, anders komt het hele
+        # bestaande assortiment als "nieuw" binnen.
+        if name == "Rockstar Store" and not any(u.startswith("store-") for u in seen):
+            seen.update(i["uid"] for i in items)
+            log(f"  {name}: {len(items)} bestaande producten vastgelegd (geen alerts)")
+            continue
         for item in items:
             if item["uid"] in seen:
                 continue
@@ -464,6 +517,7 @@ def collect(state):
 
             alerts.append(
                 {
+                    "store": item["source"] == "Rockstar Store",
                     "uid": item["uid"],
                     "key": key,
                     "priority": "gta6" if gta6 else "rockstar",
@@ -679,7 +733,10 @@ def format_alert(alert):
             f"De review van {alert['outlet']} staat online.\n"
             "Geen titel, cijfer of link in dit bericht, om spoilers te voorkomen."
         )
-    if alert["priority"] == "gta6":
+    if alert.get("store"):
+        head = ("GTA VI — NIEUW IN DE ROCKSTAR STORE" if alert["priority"] == "gta6"
+                else "NIEUW IN DE ROCKSTAR STORE")
+    elif alert["priority"] == "gta6":
         head = "GTA VI — OFFICIEEL VAN ROCKSTAR"
     elif alert["priority"] == "x":
         head = "ROCKSTAR OP X"
@@ -745,6 +802,8 @@ def main():
     for i, alert in enumerate(alerts):
         if alert["priority"] == "review":
             title = f"GTA VI review - {alert['outlet']}"
+        elif alert.get("store"):
+            title = "Rockstar Store - nieuw product"
         elif alert["priority"] == "gta6":
             title = "GTA VI - Rockstar"
         else:
