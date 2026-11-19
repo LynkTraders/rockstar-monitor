@@ -47,38 +47,7 @@
   ],
   "bootstrapped": true,
   "delivery_failures": 0,
-  "last_pending_warning": 1795092159.6993642,
-  "pending_retry_at": 1795103032.226441,
-  "pending_whatsapp": [
-    {
-      "body": "GTA VI REVIEW \u2014 IGN\n\nDe review van IGN staat online.\nGeen titel, cijfer of link in dit bericht, om spoilers te voorkomen.",
-      "ts": 1795004324.904395
-    },
-    {
-      "body": "GTA VI REVIEW \u2014 GameSpot\n\nDe review van GameSpot staat online.\nGeen titel, cijfer of link in dit bericht, om spoilers te voorkomen.",
-      "ts": 1795004324.904396
-    },
-    {
-      "body": "GTA VI REVIEW \u2014 Eurogamer\n\nDe review van Eurogamer staat online.\nGeen titel, cijfer of link in dit bericht, om spoilers te voorkomen.",
-      "ts": 1795004324.904396
-    },
-    {
-      "body": "GTA VI REVIEW \u2014 VGC\n\nDe review van VGC staat online.\nGeen titel, cijfer of link in dit bericht, om spoilers te voorkomen.",
-      "ts": 1795004324.904397
-    },
-    {
-      "body": "GTA VI REVIEW \u2014 Polygon\n\nDe review van Polygon staat online.\nGeen titel, cijfer of link in dit bericht, om spoilers te voorkomen.",
-      "ts": 1795004324.904397
-    },
-    {
-      "body": "GTA VI REVIEW \u2014 PC Gamer\n\nDe review van PC Gamer staat online.\nGeen titel, cijfer of link in dit bericht, om spoilers te voorkomen.",
-      "ts": 1795004692.124327
-    },
-    {
-      "body": "GTA VI \u2014 OFFICIEEL VAN ROCKSTAR\n\nGrand Theft Auto VI Now Available\nTags: Grand Theft Auto VI\nRockstar Newswire \u00b7 November 19, 2026\n\nhttps://www.rockstargames.com/newswire/article/39akk424a9oo53/grand-theft-auto-vi-now-available",
-      "ts": 1795097106.118538
-    }
-  ],
+  "pending_retry_at": 1795103341.412221,
   "reviewed_outlets": [
     "Eurogamer",
     "GameSpot",
