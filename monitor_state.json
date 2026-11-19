@@ -42,7 +42,8 @@
     "grand theft auto vi the festival",
     "a night in vice city",
     "pre load grand theft auto vi now",
-    "grand theft auto vi pre load now"
+    "grand theft auto vi pre load now",
+    "grand theft auto vi now available"
   ],
   "bootstrapped": true,
   "delivery_failures": 0,
@@ -88,6 +89,10 @@
     {
       "body": "ROCKSTAR OP X\n\n1 nieuwe post op X\nX / @RockstarGames\n\nhttps://x.com/RockstarGames",
       "ts": 1795095063.43937
+    },
+    {
+      "body": "GTA VI \u2014 OFFICIEEL VAN ROCKSTAR\n\nGrand Theft Auto VI Now Available\nTags: Grand Theft Auto VI\nRockstar Newswire \u00b7 November 19, 2026\n\nhttps://www.rockstargames.com/newswire/article/39akk424a9oo53/grand-theft-auto-vi-now-available",
+      "ts": 1795097106.118538
     }
   ],
   "reviewed_outlets": [
@@ -109,6 +114,7 @@
     "newswire:39a9o72a713223",
     "newswire:39ak81277255o9",
     "newswire:39ak8a12395591",
+    "newswire:39akk424a9oo53",
     "newswire:4k138k8okkk483",
     "newswire:4k17a844oakk5o",
     "newswire:4k1k9k1581aa43",
