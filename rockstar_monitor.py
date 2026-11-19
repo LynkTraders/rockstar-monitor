@@ -290,12 +290,13 @@ def fetch_x_count(attempts=4):
             if r.status_code == 404:
                 raise requests.HTTPError("404 (fxtwitter hapert)")
             r.raise_for_status()
-            count = (r.json().get("user") or {}).get("tweets")
-            if not isinstance(count, int):
-                raise ValueError("geen tweetteller in respons")
+            user = r.json().get("user") or {}
+            tweets, media = user.get("tweets"), user.get("media_count")
+            if not isinstance(tweets, int) or not isinstance(media, int):
+                raise ValueError("geen tellers in respons")
             if attempt > 1:
                 log(f"X: gelukt bij poging {attempt}")
-            return count
+            return tweets, media
         except (requests.RequestException, ValueError) as e:
             if attempt == attempts:
                 log(f"X fout na {attempts} pogingen: {e}")
@@ -305,25 +306,35 @@ def fetch_x_count(attempts=4):
 
 
 def check_x(state, alerts):
-    count = fetch_x_count()
-    if count is None:
-        return
+    """Meldt nieuwe posts op basis van de media-teller, niet de tweetteller.
 
-    previous = state.get("x_tweet_count")
-    state["x_tweet_count"] = count
+    De tweetteller telt ook antwoorden aan fans en reposts mee. Rond de
+    release (19-11-2026) liep die elk half uur op terwijl er op het profiel
+    niets nieuws stond -- Dennis kreeg melding na melding van niets. Echte
+    Rockstar-posts hebben vrijwel altijd een afbeelding of video; antwoorden
+    niet. Officiele aankondigingen komen daarnaast ook via de Newswire.
+    """
+    counts = fetch_x_count()
+    if counts is None:
+        return
+    tweets, media = counts
+
+    previous = state.get("x_media_count")
+    state["x_media_count"] = media
+    state["x_tweet_count"] = tweets  # alleen ter info
 
     if previous is None:
-        log(f"X: teller vastgelegd op {count} (geen alert bij eerste run)")
+        log(f"X: media-teller vastgelegd op {media} (geen alert bij eerste run)")
         return
-    if count <= previous:
-        log(f"X: geen nieuwe posts ({count})")
+    if media <= previous:
+        log(f"X: geen nieuwe posts (media {media}, tweets {tweets})")
         return
 
-    new = count - previous
-    log(f"X: {new} nieuwe post(s) — teller {previous} -> {count}")
+    new = media - previous
+    log(f"X: {new} nieuwe post(s) met media — teller {previous} -> {media}")
     alerts.append(
         {
-            "prev_count": previous,
+            "prev_media": previous,
             "priority": "x",
             "source": "X / @RockstarGames",
             "title": f"{new} nieuwe post{'s' if new > 1 else ''} op X",
@@ -653,8 +664,8 @@ def requeue(state, alert):
         if alert["outlet"] in outlets:
             outlets.remove(alert["outlet"])
 
-    if alert.get("priority") == "x" and alert.get("prev_count") is not None:
-        state["x_tweet_count"] = alert["prev_count"]
+    if alert.get("priority") == "x" and alert.get("prev_media") is not None:
+        state["x_media_count"] = alert["prev_media"]
 
 
 def format_alert(alert):

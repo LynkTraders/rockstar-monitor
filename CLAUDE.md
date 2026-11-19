@@ -168,3 +168,8 @@ de alerts telden als verstuurd en WhatsApp bleef leeg. Sindsdien: mislukt alleen
 gaat het bericht naar `pending_whatsapp` in de state en wordt het elke 5 min opnieuw geprobeerd
 (max 72 uur). Blijft het >15 min hangen, dan volgt een Mac-melding. Reviewtitels komen ook in
 foutlogs nooit voor.
+
+## X: media-teller i.p.v. tweetteller (19-11-2026)
+Op releasedag liep de tweetteller steeds op door antwoorden/reposts die niet op het profiel
+zichtbaar zijn -> reeks loze "ROCKSTAR OP X"-meldingen. Nu triggert alleen `media_count`
+(posts met afbeelding/video). Tekst-only posts worden gemist; officieel nieuws komt via Newswire.
