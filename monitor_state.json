@@ -49,14 +49,7 @@
   ],
   "bootstrapped": true,
   "delivery_failures": 0,
-  "last_pending_warning": 1795683748.189319,
-  "pending_retry_at": 1795701899.034285,
-  "pending_whatsapp": [
-    {
-      "body": "ROCKSTAR OP X\n\n1 nieuwe post op X\nX / @RockstarGames\n\nhttps://x.com/RockstarGames",
-      "ts": 1795443010.6237419
-    }
-  ],
+  "pending_retry_at": 1795702210.823963,
   "reviewed_outlets": [
     "Eurogamer",
     "GameSpot",
